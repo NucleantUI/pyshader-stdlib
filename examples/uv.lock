@@ -11,12 +11,11 @@ source = { git = "https://github.com/NucleantUI/PyShader#6ad72b13637a768d8b78925
 name = "pyshader-stdlib"
 version = "0.1.0"
 source = { directory = "../" }
-dependencies = [
-    { name = "pyshader" },
-]
 
 [package.metadata]
-requires-dist = [{ name = "pyshader", git = "https://github.com/NucleantUI/PyShader" }]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pyshader", git = "https://github.com/NucleantUI/PyShader" }]
 
 [[package]]
 name = "pyshader-stdlib-examples"

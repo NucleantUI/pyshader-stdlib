@@ -17,6 +17,7 @@ def rotate2d(angle: float) -> float2x2:
 
 
 def scale2d(s: float2) -> float2x2:
+    """Scales a point by s.x across and s.y up."""
     return float2x2(float2(s.x, 0.0), float2(0.0, s.y))
 
 

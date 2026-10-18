@@ -52,10 +52,12 @@ def hue_shift(c: float3, amount: float) -> float3:
 
 
 def rgb_to_yuv(c: float3) -> float3:
+    """RGB to YUV (BT.601): luma in x, chroma in y and z."""
     return RGB_TO_YUV * c
 
 
 def yuv_to_rgb(c: float3) -> float3:
+    """YUV (BT.601) back to RGB."""
     return YUV_TO_RGB * c
 
 

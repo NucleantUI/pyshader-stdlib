@@ -37,10 +37,12 @@ def rect_outline(st: float2, size: float2, width: float) -> float:
 
 
 def circle(st: float2, center: float2, radius: float) -> float:
+    """A circle of the given radius around center."""
     return 1.0 - step(radius, distance(st, center))
 
 
 def circle_smooth(st: float2, center: float2, radius: float, blur: float) -> float:
+    """circle with its edge blurred over `blur`."""
     return 1.0 - smoothstep(radius - blur, radius + blur, distance(st, center))
 
 
@@ -55,6 +57,7 @@ def polygon(st: float2, center: float2, sides: int, radius: float) -> float:
 
 
 def polygon_smooth(st: float2, center: float2, sides: int, radius: float, blur: float) -> float:
+    """polygon with its edges blurred over `blur`."""
     return 1.0 - smoothstep(radius - blur, radius + blur, polygon_distance(st - center, sides))
 
 

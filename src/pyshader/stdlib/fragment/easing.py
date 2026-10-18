@@ -14,45 +14,55 @@ HALF_PI = PI * 0.5
 
 
 def linear(t: float) -> float:
+    """No easing: t as it is."""
     return t
 
 
 def sine_in(t: float) -> float:
+    """Sine curve, slow start."""
     return 1.0 - cos(t * HALF_PI)
 
 
 def sine_out(t: float) -> float:
+    """Sine curve, slow end."""
     return sin(t * HALF_PI)
 
 
 def sine_in_out(t: float) -> float:
+    """Sine curve, slow start and end."""
     return 0.5 * (1.0 - cos(t * PI))
 
 
 def quad_in(t: float) -> float:
+    """t², slow start."""
     return t * t
 
 
 def quad_out(t: float) -> float:
+    """t², slow end."""
     return -t * (t - 2.0)
 
 
 def quad_in_out(t: float) -> float:
+    """t², slow start and end."""
     if t < 0.5:
         return 2.0 * t * t
     return -2.0 * t * t + 4.0 * t - 1.0
 
 
 def cubic_in(t: float) -> float:
+    """t³, slow start."""
     return t * t * t
 
 
 def cubic_out(t: float) -> float:
+    """t³, slow end."""
     f = t - 1.0
     return f * f * f + 1.0
 
 
 def cubic_in_out(t: float) -> float:
+    """t³, slow start and end."""
     if t < 0.5:
         return 4.0 * t * t * t
     f = 2.0 * t - 2.0
@@ -60,15 +70,18 @@ def cubic_in_out(t: float) -> float:
 
 
 def quart_in(t: float) -> float:
+    """t⁴, slow start."""
     return t * t * t * t
 
 
 def quart_out(t: float) -> float:
+    """t⁴, slow end."""
     f = t - 1.0
     return 1.0 - f * f * f * f
 
 
 def quart_in_out(t: float) -> float:
+    """t⁴, slow start and end."""
     if t < 0.5:
         return 8.0 * t * t * t * t
     f = t - 1.0
@@ -76,15 +89,18 @@ def quart_in_out(t: float) -> float:
 
 
 def quint_in(t: float) -> float:
+    """t⁵, slow start."""
     return t * t * t * t * t
 
 
 def quint_out(t: float) -> float:
+    """t⁵, slow end."""
     f = t - 1.0
     return f * f * f * f * f + 1.0
 
 
 def quint_in_out(t: float) -> float:
+    """t⁵, slow start and end."""
     if t < 0.5:
         return 16.0 * t * t * t * t * t
     f = 2.0 * t - 2.0
@@ -92,14 +108,17 @@ def quint_in_out(t: float) -> float:
 
 
 def expo_in(t: float) -> float:
+    """Exponential, very slow start."""
     return 0.0 if t <= 0.0 else pow(2.0, 10.0 * (t - 1.0))
 
 
 def expo_out(t: float) -> float:
+    """Exponential, very slow end."""
     return 1.0 if t >= 1.0 else 1.0 - pow(2.0, -10.0 * t)
 
 
 def expo_in_out(t: float) -> float:
+    """Exponential, very slow start and end."""
     if t <= 0.0 or t >= 1.0:
         return t
     if t < 0.5:
@@ -108,14 +127,17 @@ def expo_in_out(t: float) -> float:
 
 
 def circ_in(t: float) -> float:
+    """Quarter circle, slow start."""
     return 1.0 - sqrt(1.0 - t * t)
 
 
 def circ_out(t: float) -> float:
+    """Quarter circle, slow end."""
     return sqrt((2.0 - t) * t)
 
 
 def circ_in_out(t: float) -> float:
+    """Quarter circles, slow start and end."""
     if t < 0.5:
         return 0.5 * (1.0 - sqrt(1.0 - 4.0 * t * t))
     return 0.5 * (sqrt(-(2.0 * t - 3.0) * (2.0 * t - 1.0)) + 1.0)
@@ -133,6 +155,7 @@ def back_out(t: float) -> float:
 
 
 def back_in_out(t: float) -> float:
+    """Pulls back below 0, then overshoots 1 before settling."""
     if t < 0.5:
         f = 2.0 * t
         return 0.5 * (f * f * f - f * sin(f * PI))
@@ -151,6 +174,7 @@ def elastic_out(t: float) -> float:
 
 
 def elastic_in_out(t: float) -> float:
+    """Winds up like a spring, then springs past 1 and wobbles to rest."""
     if t < 0.5:
         return 0.5 * sin(13.0 * HALF_PI * (2.0 * t)) * pow(2.0, 10.0 * (2.0 * t - 1.0))
     return 0.5 * (sin(-13.0 * HALF_PI * (2.0 * t)) * pow(2.0, -10.0 * (2.0 * t - 1.0)) + 2.0)
@@ -168,10 +192,12 @@ def bounce_out(t: float) -> float:
 
 
 def bounce_in(t: float) -> float:
+    """Bounces off 0 before going."""
     return 1.0 - bounce_out(1.0 - t)
 
 
 def bounce_in_out(t: float) -> float:
+    """Bounces off 0, then falls to 1 and bounces."""
     if t < 0.5:
         return 0.5 * bounce_in(t * 2.0)
     return 0.5 * bounce_out(t * 2.0 - 1.0) + 0.5

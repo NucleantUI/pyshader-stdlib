@@ -17,19 +17,23 @@ from pyshader import *
 
 
 def random1(x: float) -> float:
+    """A pseudo-random value in 0..1 from a float."""
     return fract(sin(x) * 43758.5453123)
 
 
 def random(st: float2) -> float:
+    """A pseudo-random value in 0..1 from a float2 (the classic dot-and-sine hash)."""
     return fract(sin(dot(st, float2(12.9898, 78.233))) * 43758.5453123)
 
 
 def random2(st: float2) -> float2:
+    """Two pseudo-random values in 0..1 from a float2."""
     q = float2(dot(st, float2(127.1, 311.7)), dot(st, float2(269.5, 183.3)))
     return fract(sin(q) * 43758.5453)
 
 
 def hash11(p: float) -> float:
+    """float in, float in 0..1 out."""
     q = fract(p * 0.1031)
     q *= q + 33.33
     q *= q + q
@@ -37,36 +41,42 @@ def hash11(p: float) -> float:
 
 
 def hash12(p: float2) -> float:
+    """float2 in, float in 0..1 out."""
     p3 = fract(float3(p.xyx) * 0.1031)
     p3 += dot(p3, p3.yzx + 33.33)
     return fract((p3.x + p3.y) * p3.z)
 
 
 def hash13(p: float3) -> float:
+    """float3 in, float in 0..1 out."""
     p3 = fract(p * 0.1031)
     p3 += dot(p3, p3.zyx + 31.32)
     return fract((p3.x + p3.y) * p3.z)
 
 
 def hash21(p: float) -> float2:
+    """float in, float2 in 0..1 out."""
     p3 = fract(float3(p) * float3(0.1031, 0.1030, 0.0973))
     p3 += dot(p3, p3.yzx + 33.33)
     return fract((p3.xx + p3.yz) * p3.zy)
 
 
 def hash22(p: float2) -> float2:
+    """float2 in, float2 in 0..1 out."""
     p3 = fract(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973))
     p3 += dot(p3, p3.yzx + 33.33)
     return fract((p3.xx + p3.yz) * p3.zy)
 
 
 def hash32(p: float2) -> float3:
+    """float2 in, float3 in 0..1 out."""
     p3 = fract(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973))
     p3 += dot(p3, p3.yxz + 33.33)
     return fract((p3.xxy + p3.yzz) * p3.zyx)
 
 
 def hash33(p: float3) -> float3:
+    """float3 in, float3 in 0..1 out."""
     p3 = fract(p * float3(0.1031, 0.1030, 0.0973))
     p3 += dot(p3, p3.yxz + 33.33)
     return fract((p3.xxy + p3.yxx) * p3.zyx)

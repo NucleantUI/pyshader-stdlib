@@ -16,6 +16,7 @@ UP = float3(0.0, 1.0, 0.0)
 
 
 def translate(t: float3) -> float4x4:
+    """Moves by t."""
     return float4x4(
         float4(1.0, 0.0, 0.0, 0.0),
         float4(0.0, 1.0, 0.0, 0.0),
@@ -25,6 +26,7 @@ def translate(t: float3) -> float4x4:
 
 
 def scale(s: float3) -> float4x4:
+    """Scales by s along x, y and z."""
     return float4x4(
         float4(s.x, 0.0, 0.0, 0.0),
         float4(0.0, s.y, 0.0, 0.0),
@@ -34,6 +36,7 @@ def scale(s: float3) -> float4x4:
 
 
 def rotate_x(angle: float) -> float4x4:
+    """Turns by angle (radians) around the x axis."""
     c = cos(angle)
     s = sin(angle)
     return float4x4(
@@ -45,6 +48,7 @@ def rotate_x(angle: float) -> float4x4:
 
 
 def rotate_y(angle: float) -> float4x4:
+    """Turns by angle (radians) around the y axis."""
     c = cos(angle)
     s = sin(angle)
     return float4x4(
@@ -56,6 +60,7 @@ def rotate_y(angle: float) -> float4x4:
 
 
 def rotate_z(angle: float) -> float4x4:
+    """Turns by angle (radians) around the z axis."""
     c = cos(angle)
     s = sin(angle)
     return float4x4(

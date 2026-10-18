@@ -16,6 +16,7 @@ from pyshader import *
 
 
 def sd_circle(p: float2, r: float) -> float:
+    """A circle of radius r."""
     return length(p) - r
 
 
@@ -42,6 +43,7 @@ def sd_segment(p: float2, a: float2, b: float2) -> float:
 
 
 def sd_equilateral_triangle(p: float2, r: float) -> float:
+    """An equilateral triangle pointing up; r is half its side."""
     k = sqrt(3.0)
     q = float2(abs(p.x) - r, p.y + r / k)
     if q.x + k * q.y > 0.0:
@@ -481,6 +483,7 @@ def sd_bezier(p: float2, a: float2, b: float2, c: float2) -> float:
 
 
 def op_union(a: float, b: float) -> float:
+    """Both shapes."""
     return min(a, b)
 
 
@@ -490,6 +493,7 @@ def op_subtract(a: float, b: float) -> float:
 
 
 def op_intersect(a: float, b: float) -> float:
+    """Only where the shapes overlap."""
     return max(a, b)
 
 
@@ -500,10 +504,12 @@ def op_smooth_union(a: float, b: float, k: float) -> float:
 
 
 def op_smooth_subtract(a: float, b: float, k: float) -> float:
+    """a with b cut out of it, the cut's edge rounded over about k."""
     return -op_smooth_union(-a, b, k)
 
 
 def op_smooth_intersect(a: float, b: float, k: float) -> float:
+    """The overlap of the shapes, its edges rounded over about k."""
     return -op_smooth_union(-a, -b, k)
 
 
@@ -536,4 +542,5 @@ def stroke(d: float, width: float) -> float:
 
 
 def stroke_smooth(d: float, width: float, blur: float) -> float:
+    """1.0 on the shape's edge, `width` thick, blurred over `blur`."""
     return 1.0 - smoothstep(width * 0.5 - blur, width * 0.5 + blur, abs(d))
