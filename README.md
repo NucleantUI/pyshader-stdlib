@@ -17,11 +17,20 @@ def main(uv: float2, time: float) -> float4:
 
 ## Install
 
-In a shader project managed by uv:
+In a shader project managed by uv, next to the `pyshader` stubs:
 
-```sh
-uv add pyshader-stdlib
+```toml title="pyproject.toml"
+[project]
+dependencies = ["pyshader", "pyshader-stdlib"]
+
+[tool.uv.sources]
+pyshader = { git = "https://github.com/NucleantUI/PyShader" }
+pyshader-stdlib = { git = "https://github.com/NucleantUI/pyshader-stdlib", branch = "master" }
 ```
+
+then `uv sync`. Installed this way (not editable), the library lands in the
+stubs' `pyshader/` folder as `pyshader/stdlib/`, where the compiler and the
+editor both find it.
 
 The package declares `pyshader.stdlib` under the `pyshader.modules` entry
 point. That entry point is how the compiler knows the package may be

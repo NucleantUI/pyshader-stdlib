@@ -9,7 +9,9 @@ authors = [
 requires-python = ">=3.13"
 license = "MIT"
 license-files = ["LICENSE", "CREDITS.md"]
-dependencies = ["pyshader"]
+# The pyshader stubs are for the editor only: a shader project lists them
+# itself (see examples/), so the library adds no source of its own for them.
+dependencies = []
 
 # Declares `pyshader.stdlib` a PyShader module: the compiler imports from an
 # environment's site-packages only the modules listed here.
@@ -24,6 +26,9 @@ build-backend = "uv_build"
 # `pyshader/__init__.py` of its own.
 [tool.uv.build-backend]
 module-name = "pyshader.stdlib"
+
+[dependency-groups]
+dev = ["pyshader"]
 
 [tool.uv.sources]
 pyshader = { git = "https://github.com/NucleantUI/PyShader" }
