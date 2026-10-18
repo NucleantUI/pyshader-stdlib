@@ -1,0 +1,15 @@
+# The examples as a shader project: `uv sync` here installs pyshader and
+# pyshader-stdlib into .venv the way any project gets them (not editable),
+# where the compiler and the editor find `pyshader.stdlib`.
+[project]
+name = "pyshader-stdlib-examples"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["pyshader", "pyshader-stdlib"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+pyshader = { git = "https://github.com/NucleantUI/PyShader" }
+pyshader-stdlib = { path = ".." }

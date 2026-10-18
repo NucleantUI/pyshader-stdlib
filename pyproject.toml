@@ -1,0 +1,34 @@
+[project]
+name = "pyshader-stdlib"
+version = "0.1.0"
+description = "PyShader's standard library: shaping, color, shapes, patterns, noise and vertex helpers, as PyShader modules"
+readme = "README.md"
+authors = [
+    { name = "psychowasp", email = "psychowaspx@gmail.com" }
+]
+requires-python = ">=3.13"
+license = "MIT"
+license-files = ["LICENSE", "CREDITS.md"]
+dependencies = ["pyshader"]
+
+# Declares `pyshader.stdlib` a PyShader module: the compiler imports from an
+# environment's site-packages only the modules listed here.
+[project.entry-points."pyshader.modules"]
+stdlib = "pyshader.stdlib"
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"
+
+# Installs as `pyshader/stdlib/`, next to the pyshader stubs: no
+# `pyshader/__init__.py` of its own.
+[tool.uv.build-backend]
+module-name = "pyshader.stdlib"
+
+[tool.uv.sources]
+pyshader = { git = "https://github.com/NucleantUI/PyShader" }
+
+# Installed non-editable (copied into site-packages, next to the pyshader
+# stubs): any change to the sources reinstalls it on the next `uv sync`.
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.py" }]
