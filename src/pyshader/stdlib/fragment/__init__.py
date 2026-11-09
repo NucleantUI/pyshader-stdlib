@@ -6,6 +6,7 @@
     blend     layer blend modes
     shapes    rectangles, circles, polygons, polar   (ch. 7)
     sdf       2D signed distance functions           (ch. 7)
+    light     glow, neon, LEDs, shading, shadows, tone mapping
     coords    centering, aspect, polar coordinates   (ch. 7)
     matrix    2D rotate / scale                      (ch. 8)
     pattern   tiling, bricks, mirrored and truchet   (ch. 9)

@@ -27,8 +27,15 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "pyshader.stdlib"
 
+# The stubs for the editor; pytest, and wasmtime for the compiler the tests
+# run (pyshader_builder's, from the pyshader package).
 [dependency-groups]
-dev = ["pyshader"]
+dev = ["pyshader", "pytest>=8", "wasmtime>=25"]
+
+# tests/cpu.py runs the library on the CPU; the tests import it by name.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
 
 [tool.uv.sources]
 pyshader = { git = "https://github.com/NucleantUI/PyShader" }

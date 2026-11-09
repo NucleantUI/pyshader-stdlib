@@ -9,6 +9,9 @@ Credits:
 - distance functions and operators: Inigo Quilez, "2D distance functions" —
   https://iquilezles.org/articles/distfunctions2d/ and "smooth minimum" —
   https://iquilezles.org/articles/smin/ (his shader code is MIT licensed)
+- `sd_arc_polygon`: after Aditya Ganeshan's polygon with bulge-arc edges
+  (2026, MIT licensed), which builds on sdPolygon; bulges as in AutoCAD's
+  polylines — https://www.lee-mac.com/bulgeconversion.html
 - `fill` / `stroke`: the way The Book of Shaders, ch. 7 "Shapes"
   (https://thebookofshaders.com/07/) turns a distance field into a mask
 """
@@ -186,18 +189,86 @@ def sd_polygon(v: list[float2], p: float2) -> float:
     Exact, for convex and concave polygons alike."""
     d = dot(p - v[0], p - v[0])
     s = 1.0
-    j = len(v) - 1
+    # The previous corner is carried along, not indexed: OpenGL ES 2 indexes
+    # only with constants and the loop's counter.
+    last = v[len(v) - 1]
     for i in range(len(v)):
-        e = v[j] - v[i]
+        e = last - v[i]
         w = p - v[i]
         b = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0)
         d = min(d, dot(b, b))
         # Crossings of a ray to the right: an odd count is inside.
-        c = bool3(p.y >= v[i].y, p.y < v[j].y, e.x * w.y > e.y * w.x)
+        c = bool3(p.y >= v[i].y, p.y < last.y, e.x * w.y > e.y * w.x)
         if all(c) or not any(c):
             s = -s
-        j = i
+        last = v[i]
     return s * sqrt(d)
+
+
+def sd_arc_polygon(v: list[float3], p: float2) -> float:
+    """Any outline of straight edges and circular arcs, by its corners in order:
+    v[i] = (x, y, bulge), the bulge of the edge from corner i to the next.
+    A bulge of 0 is a straight edge, else tan(arc angle / 4): 1 a half circle,
+    0.41 a quarter; positive bows the edge to the right of its direction
+    (outward when the corners run counterclockwise), negative to the left.
+    Exact."""
+    d = dot(p - v[0].xy, p - v[0].xy)
+    s = 1.0
+    last = v[len(v) - 1]      # carried along, as in sd_polygon
+    for i in range(len(v)):
+        a = last.xy
+        b = v[i].xy
+        k = last.z
+        e = b - a
+        w = p - a
+        # Crossings of a ray to the right with the chord: an odd count is inside.
+        c = bool3(p.y >= a.y, p.y < b.y, e.x * w.y > e.y * w.x)
+        if all(c) or not any(c):
+            s = -s
+        if abs(k) < 0.0001:
+            g = w - e * clamp(dot(w, e) / dot(e, e), 0.0, 1.0)
+            d = min(d, dot(g, g))
+        else:
+            # The arc's circle: center beside the chord's middle, toward the
+            # bulge for more than a half circle, away from it for less.
+            n = float2(e.y, -e.x)                     # the chord's right normal, chord-long
+            center = (a + b) * 0.5 + n * ((k * k - 1.0) / (4.0 * k))
+            radius = length(e) * (1.0 + k * k) / (4.0 * abs(k))
+            u = p - center
+            l = length(u)
+            # p's nearest point on the circle is on the arc when it lies on the
+            # bulge's side of the chord; else the nearest point is an end.
+            if length(e) * (k * k - 1.0) * l + sign(k) * (1.0 + k * k) * dot(u, n) > 0.0:
+                d = min(d, (l - radius) * (l - radius))
+            else:
+                d = min(d, min(dot(w, w), dot(p - b, p - b)))
+            # Between the chord and the arc: the arc adds it, or cuts it away.
+            if l < radius and sign(k) * dot(w, n) > 0.0:
+                s = -s
+        last = v[i]
+    return s * sqrt(d)
+
+
+def sd_stairs(p: float2, wh: float2, n: float) -> float:
+    """A staircase of n steps, each wh.x deep and wh.y high, climbing to the
+    right from the origin; solid below the steps, down to y = 0."""
+    ba = wh * n
+    d = min(_dot2(p - float2(clamp(p.x, 0.0, ba.x), 0.0)),
+            _dot2(p - float2(ba.x, clamp(p.y, 0.0, ba.y))))
+    s = sign(max(-p.y, p.x - ba.x))
+    dia = length(wh)
+    q = float2(wh.x * p.x + wh.y * p.y, wh.x * p.y - wh.y * p.x) / dia
+    i = clamp(floor(q.x / dia + 0.5), 0.0, n - 1.0)
+    q.x -= i * dia
+    q = float2(wh.x * q.x - wh.y * q.y, wh.y * q.x + wh.x * q.y) / dia
+    hh = wh.y * 0.5
+    q.y -= hh
+    if q.y > hh * sign(q.x):
+        s = 1.0
+    q = q if i < 0.5 or q.x > 0.0 else -q
+    d = min(d, _dot2(q - float2(0.0, clamp(q.y, -hh, hh))))
+    d = min(d, _dot2(q - float2(clamp(q.x, 0.0, wh.x), hh)))
+    return sqrt(d) * s
 
 
 def sd_pentagon(p: float2, r: float) -> float:
@@ -291,6 +362,40 @@ def sd_rounded_cross(p: float2, h: float) -> float:
     return sqrt(min(_dot2(q - float2(0.0, h)), _dot2(q - float2(1.0, 0.0))))
 
 
+def sd_blobby_cross(p: float2, he: float) -> float:
+    """A four-pointed blob with its points at (±1, 0) and (0, ±1). he (at most
+    0.35) curves the sides between them: in toward the center for he > 0, a
+    cross; out for he < 0, a rounded square."""
+    q = abs(p)
+    q = float2(abs(q.x - q.y), 1.0 - q.x - q.y) / sqrt(2.0)
+    pp = (he - q.y - 0.25 / he) / (6.0 * he)
+    qq = q.x / (he * he * 16.0)
+    h = qq * qq - pp * pp * pp
+    x = 0.0
+    if h > 0.0:
+        r = sqrt(h)
+        x = pow(qq + r, 1.0 / 3.0) - pow(abs(qq - r), 1.0 / 3.0) * sign(r - qq)
+    else:
+        r = sqrt(pp)
+        x = 2.0 * r * cos(acos(qq / (pp * r)) / 3.0)
+    x = min(x, sqrt(2.0) / 2.0)
+    z = float2(x, he * (1.0 - 2.0 * x * x)) - q
+    return length(z) * sign(z.y)
+
+
+def sd_cool_s(p: float2) -> float:
+    """The "Cool S" of school notebooks, from y = -1 to 1."""
+    six = -p.x if p.y < 0.0 else p.x
+    q = float2(abs(p.x), abs(p.y) - 0.2)
+    rex = q.x - min(floor(q.x / 0.4 + 0.5), 0.4)
+    aby = abs(q.y - 0.2) - 0.6
+    d = _dot2(float2(six, -q.y) - clamp(0.5 * (six - q.y), 0.0, 0.2))
+    d = min(d, _dot2(float2(q.x, -aby) - clamp(0.5 * (q.x - aby), 0.0, 0.4)))
+    d = min(d, _dot2(float2(rex, q.y - clamp(q.y, 0.0, 0.4))))
+    s = 2.0 * q.x + aby + abs(aby + 0.4) - 0.4
+    return sqrt(d) * sign(s)
+
+
 # Round shapes
 
 
@@ -333,6 +438,28 @@ def sd_ellipse(p: float2, ab: float2) -> float:
     return length(r - q) * sign(_dot2(q / e) - 1.0)
 
 
+def sd_quadratic_circle(p: float2) -> float:
+    """A circle of radius 1 drawn with parabolas: a little squarer than a circle."""
+    q = abs(p)
+    if q.y > q.x:
+        q = q.yx
+    a = q.x - q.y
+    b = q.x + q.y
+    c = (2.0 * b - 1.0) / 3.0
+    h = a * a + c * c * c
+    t = 0.0
+    if h >= 0.0:
+        h = sqrt(h)
+        t = sign(h - a) * pow(abs(h - a), 1.0 / 3.0) - pow(h + a, 1.0 / 3.0)
+    else:
+        z = sqrt(-c)
+        v = acos(a / (c * z)) / 3.0
+        t = -z * (cos(v) + sin(v) * 1.732050808)
+    t *= 0.5
+    w = float2(-t, t) + 0.75 - t * t - q
+    return length(w) * sign(a * a * 0.5 + b - 1.5)
+
+
 def sd_pie(p: float2, c: float2, r: float) -> float:
     """A pie slice of radius r opening upward; c = (sin, cos) of half its angle."""
     q = float2(abs(p.x), p.y)
@@ -347,6 +474,15 @@ def sd_arc(p: float2, sc: float2, ra: float, rb: float) -> float:
     if sc.y * q.x > sc.x * q.y:
         return length(q - sc * ra) - rb
     return abs(length(q) - ra) - rb
+
+
+def sd_ring(p: float2, n: float2, r: float, th: float) -> float:
+    """A piece of a ring of radius r, th thick, with flat ends, centered on the
+    +y axis; n = (cos, sin) of half its angle."""
+    q = float2(abs(p.x), p.y)
+    q = float2(n.x * q.x - n.y * q.y, n.y * q.x + n.x * q.y)
+    return max(abs(length(q) - r) - th * 0.5,
+               length(float2(q.x, max(0.0, abs(r - q.y) - th * 0.5))) * sign(q.x))
 
 
 def sd_cut_disk(p: float2, r: float, h: float) -> float:
@@ -381,6 +517,29 @@ def sd_vesica(p: float2, r: float, d: float) -> float:
     return length(q - float2(-d, 0.0)) - r
 
 
+def sd_lens(p: float2, w: float, h: float) -> float:
+    """A lens (vesica) lying on its side, by its size: its points at (±w, 0),
+    h half tall in the middle (h < w). Turn it upright with p.yx."""
+    d = 0.5 * (w * w - h * h) / h
+    q = abs(p)
+    if w * q.y < d * (q.x - w):
+        return length(q - float2(w, 0.0))
+    return length(q - float2(0.0, -d)) - (d + h)
+
+
+def sd_oriented_vesica(p: float2, a: float2, b: float2, w: float) -> float:
+    """A lens with its points at a and b, w half wide in the middle (w smaller
+    than half the distance from a to b)."""
+    r = 0.5 * length(b - a)
+    d = 0.5 * (r * r - w * w) / w
+    v = (b - a) / r
+    c = p - (a + b) * 0.5
+    q = 0.5 * abs(float2(v.y * c.x - v.x * c.y, v.x * c.x + v.y * c.y))
+    if r * q.x < d * (q.y - r):
+        return length(q - float2(0.0, r))
+    return length(q - float2(-d, 0.0)) - (d + w)
+
+
 def sd_egg(p: float2, ra: float, rb: float) -> float:
     """An egg: a circle of radius ra at the bottom narrowing to rb at the top (rb < ra)."""
     k = sqrt(3.0)
@@ -391,6 +550,21 @@ def sd_egg(p: float2, ra: float, rb: float) -> float:
     if k * (q.x + r) < q.y:
         return length(float2(q.x, q.y - k * r)) - rb
     return length(float2(q.x + r, q.y)) - 2.0 * r - rb
+
+
+def sd_bulging_egg(p: float2, he: float, ra: float, rb: float, bu: float) -> float:
+    """An egg from a circle of radius ra at the origin to one of radius rb at
+    (0, he), joined by round sides; bu (0..1] sets how much they bulge."""
+    r = 0.5 * (he + ra + rb) / bu
+    da = r - ra
+    db = r - rb
+    y = (db * db - da * da - he * he) / (2.0 * he)
+    x = sqrt(da * da - y * y)
+    q = float2(abs(p.x), p.y)
+    k = q.y * x - q.x * y
+    if k > 0.0 and k < he * (q.x + x):
+        return length(q + float2(x, y)) - r
+    return min(length(q) - ra, length(float2(q.x, q.y - he)) - rb)
 
 
 def sd_uneven_capsule(p: float2, r1: float, r2: float, h: float) -> float:
@@ -445,6 +619,88 @@ def sd_parabola(p: float2, k: float) -> float:
     else:
         x = 2.0 * cos(atan2(r, qq) / 3.0) * sqrt(pp)
     return length(q - float2(x, k * x * x)) * sign(q.x - x)
+
+
+def sd_parabola_segment(p: float2, wi: float, he: float) -> float:
+    """Signed distance to an arch of parabola from (-wi, 0) up to (0, he) and
+    down to (wi, 0); negative below the curve."""
+    q = float2(abs(p.x), p.y)
+    ik = wi * wi / he
+    pp = ik * (he - q.y - 0.5 * ik) / 3.0
+    qq = q.x * ik * ik / 4.0
+    h = qq * qq - pp * pp * pp
+    x = 0.0
+    if h > 0.0:
+        r = pow(qq + sqrt(h), 1.0 / 3.0)
+        x = r + pp / r
+    else:
+        r = sqrt(pp)
+        x = 2.0 * r * cos(acos(qq / (pp * r)) / 3.0)
+    x = min(x, wi)
+    return length(q - float2(x, he - x * x / ik)) * sign(ik * (q.y - he) + q.x * q.x)
+
+
+def sd_hyperbola(p: float2, k: float, he: float) -> float:
+    """Signed distance to the hyperbola x² - y² = 2k (k > 0), its two branches
+    cut off he from the x axis; negative inside the branches."""
+    q = abs(p)
+    q = float2(q.x - q.y, q.x + q.y) / sqrt(2.0)
+    x2 = q.x * q.x / 16.0
+    y2 = q.y * q.y / 16.0
+    r = k * (4.0 * k - q.x * q.y) / 12.0
+    qq = (x2 - y2) * k * k
+    h = qq * qq + r * r * r
+    u = 0.0
+    if h < 0.0:
+        m = sqrt(-r)
+        u = m * cos(acos(qq / (r * m)) / 3.0)
+    else:
+        m = pow(sqrt(h) - qq, 1.0 / 3.0)
+        u = (m - r / m) / 2.0
+    w = sqrt(u + x2)
+    b = k * q.y - x2 * q.x * 2.0
+    t = q.x / 4.0 - w + sqrt(2.0 * x2 - u + b / w / 4.0)
+    t = max(t, sqrt(he * he * 0.5 + k) - he / sqrt(2.0))
+    d = length(q - float2(t, k / t))
+    return d if q.x * q.y < k else -d
+
+
+def sd_circle_wave(p: float2, tb: float, ra: float) -> float:
+    """Distance to a wave of circle arcs of radius ra running along the x axis;
+    tb (0..1) sets how much of each circle an arc takes, from nearly flat to
+    almost closed loops."""
+    t = PI * 5.0 / 6.0 * max(tb, 0.0001)
+    co = ra * float2(sin(t), cos(t))
+    x = abs(mod(p.x, co.x * 4.0) - co.x * 2.0)
+    p1 = float2(x, p.y)
+    p2 = float2(abs(x - 2.0 * co.x), 2.0 * co.y - p.y)
+    d1 = length(p1 - co) if co.y * p1.x > co.x * p1.y else abs(length(p1) - ra)
+    d2 = length(p2 - co) if co.y * p2.x > co.x * p2.y else abs(length(p2) - ra)
+    return min(d1, d2)
+
+
+# Repetition: these move p, not the distance. Draw one shape at the point they
+# return and it is drawn in every cell. A shape bigger than its cell is cut
+# off at the cell's edge.
+
+
+def op_repeat(p: float2, spacing: float2) -> float2:
+    """Repeats a shape over a grid, a copy every `spacing`, one at the origin."""
+    return p - spacing * floor(p / spacing + 0.5)
+
+
+def op_repeat_limited(p: float2, spacing: float2, count: float2) -> float2:
+    """Repeats a shape over a grid, `count` copies to each side of the one at the
+    origin: (2·count + 1) along each axis. A row: count = (n, 0)."""
+    return p - spacing * clamp(floor(p / spacing + 0.5), -count, count)
+
+
+def op_repeat_polar(p: float2, count: float) -> float2:
+    """Repeats a shape `count` times around the origin. Place the one copy along
+    +x: sd_circle(op_repeat_polar(p, 6.0) - float2(0.3, 0.0), 0.1)."""
+    an = 2.0 * PI / count
+    a = mod(atan2(p.y, p.x) + 0.5 * an, an) - 0.5 * an
+    return length(p) * float2(cos(a), sin(a))
 
 
 def sd_bezier(p: float2, a: float2, b: float2, c: float2) -> float:
