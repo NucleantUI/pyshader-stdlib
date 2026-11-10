@@ -10,6 +10,7 @@ instead, with GLSL's rules: a negative square root or `acos` past ±1 gives NaN
 from __future__ import annotations
 
 import builtins
+import dataclasses
 import importlib.util
 import math
 import sys
@@ -85,6 +86,20 @@ def _div(a: float, b: float) -> float:
     return a / b
 
 
+class Mat2:
+    """float2x2 from its two columns; times a float2 is the column combination."""
+
+    __slots__ = ("columns",)
+
+    def __init__(self, a: Vec, b: Vec):
+        self.columns = (a, b)
+
+    def __mul__(self, v: Vec) -> Vec:
+        a, b = self.columns
+        return Vec.of([a.c[0] * v.c[0] + b.c[0] * v.c[1], a.c[1] * v.c[0] + b.c[1] * v.c[1]])
+
+
+def float2x2(a: Vec, b: Vec) -> Mat2: return Mat2(a, b)
 def float2(*parts) -> Vec: return Vec(*parts, n=2)
 def float3(*parts) -> Vec: return Vec(*parts, n=3)
 def float4(*parts) -> Vec: return Vec(*parts, n=4)
@@ -166,9 +181,36 @@ def normalize(v: Vec) -> Vec:
     return v / length(v)
 
 
+def reflect(i: Vec, n: Vec) -> Vec:
+    """GLSL's reflect: i mirrored about the surface facing n."""
+    return i - n * (2.0 * dot(n, i))
+
+
+def refract(i: Vec, n: Vec, eta: float) -> Vec:
+    """GLSL's refract: i bent through a surface facing n, eta = n1 / n2; zero past total internal reflection."""
+    d = dot(n, i)
+    k = 1.0 - eta * eta * (1.0 - d * d)
+    if k < 0.0:
+        return Vec.of([0.0] * len(i))
+    return i * eta - n * (eta * d + math.sqrt(k))
+
+
+def Texture(f):
+    """A texture on the CPU: any callable from a float2 to a float4."""
+    return f
+
+
 NAMES = {name: value for name, value in globals().items()
          if not name.startswith("_") and name not in {"annotations", "builtins", "importlib", "math", "sys",
-                                                      "types", "Path", "SOURCES", "Vec", "NAMES", "load", "nan"}}
+                                                      "types", "Path", "SOURCES", "Vec", "Mat2", "NAMES", "load",
+                                                      "nan", "dataclasses"}}
+
+
+def _structs(module: types.ModuleType) -> None:
+    """The module's classes as PyShader has them: plain structs, built positionally or by keyword."""
+    for value in list(vars(module).values()):
+        if isinstance(value, type) and value.__module__ == module.__name__ and "__dataclass_fields__" not in vars(value):
+            dataclasses.dataclass(value)
 
 
 def load(module: str) -> types.ModuleType:
@@ -183,7 +225,11 @@ def load(module: str) -> types.ModuleType:
         del sys.modules[name]
     sys.modules["pyshader"] = shim
     try:
-        return importlib.import_module(module)
+        loaded = importlib.import_module(module)
+        for name, m in list(sys.modules.items()):
+            if name.startswith("pyshader.stdlib"):
+                _structs(m)
+        return loaded
     finally:
         for name in [n for n in sys.modules if n == "pyshader" or n.startswith("pyshader.")]:
             del sys.modules[name]
