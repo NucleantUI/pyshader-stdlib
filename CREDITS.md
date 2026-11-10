@@ -91,6 +91,32 @@ arc without turning the point into the arc's frame.
   as a ball (`sphere_normal` and the shading with it); Blinn-Phong; Christophe
   Schlick's Fresnel approximation (`fresnel`).
 
+## Surfaces and materials
+
+`surface` lights a point the way physically based renderers do; `material`
+builds the points.
+
+- `surface.ggx`: Trowbridge & Reitz, "Average irregularity representation of
+  a rough surface for ray reflection" (1975); Walter, Marschner, Li &
+  Torrance, "Microfacet Models for Refraction through Rough Surfaces" (EGSR 2007)
+- `surface.visibility`: Smith's masking, Schlick's approximation as remapped
+  by Brian Karis, "Real Shading in Unreal Engine 4" (SIGGRAPH 2013 course)
+- `surface.fresnel_schlick`, `fresnel_roughness`: Christophe Schlick, "An
+  Inexpensive BRDF Model for Physically-based Rendering" (1994); the
+  roughness term after Sébastien Lagarde, "Adopting a physically based
+  shading model" (2011)
+- `surface.shade`: the Cook-Torrance microfacet model with a Lambertian
+  diffuse, in the metallic / roughness terms of Brent Burley, "Physically
+  Based Shading at Disney" (SIGGRAPH 2012). The diffuse share is what the
+  surface does not reflect on the way in, so lit from any angle it sends out
+  no more than it gets (tests/test_surface.py integrates it).
+- `material`'s metal reflectances: Naty Hoffman, "Background: Physics and
+  Math of Shading" (SIGGRAPH 2013 course)
+- `material.absorb`: the Beer-Lambert law; `frosted_glass_over`'s samples
+  on Vogel's spiral, "A better way to construct the sunflower head" (1979)
+- `material.marble`: turbulent sine veins, Ken Perlin, "An Image
+  Synthesizer" (SIGGRAPH 1985)
+
 ## Simplex noise: Ashima Arts and Stefan Gustavson
 
 `noise.simplex_noise` and `noise.simplex_noise3`, from "webgl-noise" by Ian
